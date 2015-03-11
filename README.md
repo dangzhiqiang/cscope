@@ -1,11 +1,12 @@
 # cscope
+------
 Cscope is a developer'.s tool for browsing C programming code.
 
-init version cscope-15.8a release, you can also find here:
-http://cscope.sourceforge.net/
-http://sourceforge.net/projects/cscope/files/
+	init version cscope-15.8a release, you can also find here:
+	http://cscope.sourceforge.net/
+	http://sourceforge.net/projects/cscope/files/
 
-Usage:
+### Usage:
 	cscope commands:
 	add  : Add a new database             (Usage: add file|dir [pre-path] [flags])
 	find : Query for a pattern            (Usage: find c|d|e|f|g|i|s|t name)
