@@ -8,7 +8,7 @@
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
 #define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 35
+#define YY_FLEX_SUBMINOR_VERSION 39
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -53,7 +53,6 @@ typedef int flex_int32_t;
 typedef unsigned char flex_uint8_t; 
 typedef unsigned short int flex_uint16_t;
 typedef unsigned int flex_uint32_t;
-#endif /* ! C99 */
 
 /* Limits of integral types. */
 #ifndef INT8_MIN
@@ -83,6 +82,8 @@ typedef unsigned int flex_uint32_t;
 #ifndef UINT32_MAX
 #define UINT32_MAX             (4294967295U)
 #endif
+
+#endif /* ! C99 */
 
 #endif /* ! FLEXINT_H */
 
@@ -152,7 +153,12 @@ typedef unsigned int flex_uint32_t;
 typedef struct yy_buffer_state *YY_BUFFER_STATE;
 #endif
 
-extern int yyleng;
+#ifndef YY_TYPEDEF_YY_SIZE_T
+#define YY_TYPEDEF_YY_SIZE_T
+typedef size_t yy_size_t;
+#endif
+
+extern yy_size_t yyleng;
 
 extern FILE *yyin, *yyout;
 
@@ -161,6 +167,7 @@ extern FILE *yyin, *yyout;
 #define EOB_ACT_LAST_MATCH 2
 
     #define YY_LESS_LINENO(n)
+    #define YY_LINENO_REWIND_TO(ptr)
     
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -177,11 +184,6 @@ extern FILE *yyin, *yyout;
 	while ( 0 )
 
 #define unput(c) yyunput( c, (yytext_ptr)  )
-
-#ifndef YY_TYPEDEF_YY_SIZE_T
-#define YY_TYPEDEF_YY_SIZE_T
-typedef size_t yy_size_t;
-#endif
 
 #ifndef YY_STRUCT_YY_BUFFER_STATE
 #define YY_STRUCT_YY_BUFFER_STATE
@@ -200,7 +202,7 @@ struct yy_buffer_state
 	/* Number of characters read into yy_ch_buf, not including EOB
 	 * characters.
 	 */
-	int yy_n_chars;
+	yy_size_t yy_n_chars;
 
 	/* Whether we "own" the buffer - i.e., we know we created it,
 	 * and can realloc() it to grow it, and should free() it to
@@ -270,8 +272,8 @@ static YY_BUFFER_STATE * yy_buffer_stack = 0; /**< Stack as an array. */
 
 /* yy_hold_char holds the character lost when yytext is formed. */
 static char yy_hold_char;
-static int yy_n_chars;		/* number of characters read into yy_ch_buf */
-int yyleng;
+static yy_size_t yy_n_chars;		/* number of characters read into yy_ch_buf */
+yy_size_t yyleng;
 
 /* Points to current character in buffer. */
 static char *yy_c_buf_p = (char *) 0;
@@ -299,7 +301,7 @@ static void yy_init_buffer (YY_BUFFER_STATE b,FILE *file  );
 
 YY_BUFFER_STATE yy_scan_buffer (char *base,yy_size_t size  );
 YY_BUFFER_STATE yy_scan_string (yyconst char *yy_str  );
-YY_BUFFER_STATE yy_scan_bytes (yyconst char *bytes,int len  );
+YY_BUFFER_STATE yy_scan_bytes (yyconst char *bytes,yy_size_t len  );
 
 void *yyalloc (yy_size_t  );
 void *yyrealloc (void *,yy_size_t  );
@@ -331,7 +333,7 @@ void yyfree (void *  );
 
 /* Begin user sect3 */
 
-#define yywrap(n) 1
+#define yywrap() 1
 #define YY_SKIP_YYWRAP
 
 typedef unsigned char YY_CHAR;
@@ -29668,7 +29670,7 @@ char *yytext;
 #define	IFLEVELINC	5	/* #if nesting level size increment */
 #define YY_NO_TOP_STATE 1
 
-static char const rcsid[] = "$Id: fscanner.l,v 1.17 2012/08/02 21:48:08 broeker Exp $";
+static char const rcsid[] = "$Id: fscanner.l,v 1.18 2014/11/20 21:18:51 broeker Exp $";
 
 int	first;	/* buffer index for first char of symbol */
 int	last;	/* buffer index for last char of symbol */
@@ -29691,11 +29693,11 @@ static	BOOL	external;		/* external definition */
 static	int	externalbraces;		/* external definition outer brace count */
 static	BOOL	fcndef;			/* function definition */
 static	BOOL	global;			/* file global scope (outside functions) */
-static	int	iflevel;		/* #if nesting level */
+static	size_t	iflevel;		/* #if nesting level */
 static	BOOL	initializer;		/* data initializer */
 static	int	initializerbraces;	/* data initializer outer brace count */
 static	BOOL	lex;			/* lex file */
-static	int	miflevel = IFLEVELINC;	/* maximum #if nesting level */
+static	size_t	miflevel = IFLEVELINC;	/* maximum #if nesting level */
 static	int	*maxifbraces;		/* maximum brace count within #if */
 static	int	*preifbraces;		/* brace count before #if */
 static	int	parens;			/* unmatched left parenthesis count */
@@ -29712,42 +29714,13 @@ static	int	typedefbraces = -1;	/* initial typedef brace count */
 static	int	token;			/* token found */
 static	int 	ident_start;		/* begin of preceding identifier */
 
-/* If this is defined to 1, use flex rules rather than the input
- * function to discard comments. The scanner gains quite a bit of
- * speed this way, because of a large reduction of the number of I/O
- * system/library calls.  The original skipcomment_input() called
- * getc() so often that the call overhead of shared libraries
- * vs. static linking, alone, already caused a sizeable performance
- * hit (up to 40% gross gain on a cscope -cub of its own source
- * dir). */
-#define COMMENTS_BY_FLEX 1
-
-#if !COMMENTS_BY_FLEX
-static	int	skipcomment_input(void);
-static	int	comment(void);
-static	int	insidestring_input(int);
-#endif
-
 static	void	my_yymore(void);
-
-#if COMMENTS_BY_FLEX
-# define skipcomment_input input
-#else
-
-# define YY_INPUT(buf,result,max_size)				\
-{								\
-	int c = skipcomment_input ();				\
-	result = (c == EOF) ? YY_NULL : (buf[0] = c, 1);	\
-}
-
-#endif /* !COMMENTS_BY_FLEX*/
-
 
 /* flex options: stack of start conditions, and don't use yywrap() */
 
 /* exclusive start conditions. not available in AT&T lex -> use flex! */
 
-#line 29751 "fscanner.c"
+#line 29724 "fscanner.c"
 
 #define INITIAL 0
 #define SDL 1
@@ -29794,7 +29767,7 @@ FILE *yyget_out (void );
 
 void yyset_out  (FILE * out_str  );
 
-int yyget_leng (void );
+yy_size_t yyget_leng (void );
 
 char *yyget_text (void );
 
@@ -29854,7 +29827,7 @@ static int input (void );
 /* This used to be an fputs(), but since the string might contain NUL's,
  * we now use fwrite().
  */
-#define ECHO fwrite( yytext, yyleng, 1, yyout )
+#define ECHO do { if (fwrite( yytext, yyleng, 1, yyout )) {} } while (0)
 #endif
 
 /* Gets input and stuffs it into "buf".  number of characters read, or YY_NULL,
@@ -29865,7 +29838,7 @@ static int input (void );
 	if ( YY_CURRENT_BUFFER_LVALUE->yy_is_interactive ) \
 		{ \
 		int c = '*'; \
-		int n; \
+		size_t n; \
 		for ( n = 0; n < max_size && \
 			     (c = getc( yyin )) != EOF && c != '\n'; ++n ) \
 			buf[n] = (char) c; \
@@ -29950,11 +29923,6 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 148 "fscanner.l"
-
-
-#line 29957 "fscanner.c"
-
 	if ( !(yy_init) )
 		{
 		(yy_init) = 1;
@@ -29981,6 +29949,12 @@ YY_DECL
 		yy_load_buffer_state( );
 		}
 
+	{
+#line 119 "fscanner.l"
+
+
+#line 29957 "fscanner.c"
+
 	while ( 1 )		/* loops until end-of-file is reached */
 		{
 		(yy_more_len) = 0;
@@ -30004,7 +29978,7 @@ YY_DECL
 yy_match:
 		do
 			{
-			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)];
+			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)] ;
 			if ( yy_accept[yy_current_state] )
 				{
 				(yy_last_accepting_state) = yy_current_state;
@@ -30045,7 +30019,7 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 150 "fscanner.l"
+#line 121 "fscanner.l"
 {	/* lex/yacc C declarations/definitions */
 			global = YES;
 			goto more;
@@ -30054,7 +30028,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 155 "fscanner.l"
+#line 126 "fscanner.l"
 {
 			global = NO;
 			goto more;
@@ -30063,7 +30037,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 160 "fscanner.l"
+#line 131 "fscanner.l"
 {	/* lex/yacc rules delimiter */
 			braces = 0;
 			if (rules == NO) {
@@ -30105,7 +30079,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 199 "fscanner.l"
+#line 170 "fscanner.l"
 { /* sdl state, treat as function def */
 			braces = 1;
 			fcndef = YES;
@@ -30116,7 +30090,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 206 "fscanner.l"
+#line 177 "fscanner.l"
 { /* end of an sdl state, treat as end of a function */
 			goto endstate;
 			/* NOTREACHED */
@@ -30124,7 +30098,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 211 "fscanner.l"
+#line 182 "fscanner.l"
 {	/* count unmatched left braces for fcn def detection */
 			++braces;
 			
@@ -30146,7 +30120,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 230 "fscanner.l"
+#line 201 "fscanner.l"
 { /* start a preprocessor line */
 			if (rules == NO)		/* don't consider CPP for lex/yacc rules */
 				BEGIN(IN_PREPROC);
@@ -30157,7 +30131,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 237 "fscanner.l"
+#line 208 "fscanner.l"
 {	/* #endif */
 			/* delay treatment of #endif depending on whether an
 			 * #if comes right after it, or not */
@@ -30171,7 +30145,7 @@ YY_RULE_SETUP
 case 9:
 /* rule 9 can match eol */
 YY_RULE_SETUP
-#line 246 "fscanner.l"
+#line 217 "fscanner.l"
 {
 			/* attempt to correct erroneous brace count caused by:
 			 * 
@@ -30198,7 +30172,7 @@ YY_RULE_SETUP
 case 10:
 /* rule 10 can match eol */
 YY_RULE_SETUP
-#line 268 "fscanner.l"
+#line 239 "fscanner.l"
 { 	/* an #endif with no #if right after it */
 		endif:
 			if (iflevel > 0) {
@@ -30215,12 +30189,12 @@ YY_RULE_SETUP
 		}
 	YY_BREAK
 case 11:
-#line 284 "fscanner.l"
+#line 255 "fscanner.l"
 case 12:
-#line 285 "fscanner.l"
+#line 256 "fscanner.l"
 case 13:
 YY_RULE_SETUP
-#line 285 "fscanner.l"
+#line 256 "fscanner.l"
 { /* #if directive */
 			elseelif = NO;
 			if (pseudoelif == YES) {
@@ -30231,8 +30205,8 @@ YY_RULE_SETUP
 			/* make sure there is room for the current brace count */
 			if (iflevel == miflevel) {
 				miflevel += IFLEVELINC;
-				maxifbraces = myrealloc(maxifbraces, miflevel * sizeof(int));
-				preifbraces = myrealloc(preifbraces, miflevel * sizeof(int));
+				maxifbraces = myrealloc(maxifbraces, miflevel * sizeof(*maxifbraces));
+				preifbraces = myrealloc(preifbraces, miflevel * sizeof(*preifbraces));
 			}
 			/* push the current brace count */
 			preifbraces[iflevel] = braces;
@@ -30244,7 +30218,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 305 "fscanner.l"
+#line 276 "fscanner.l"
 { /* #else --- eat up whole line */
 			elseelif = YES;
 			if (iflevel > 0) {
@@ -30263,7 +30237,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 320 "fscanner.l"
+#line 291 "fscanner.l"
 { /* #elif */
 			/* elseelif = YES; --- HBB I doubt this is correct */
 		elif:
@@ -30282,10 +30256,10 @@ YY_RULE_SETUP
 		}
 	YY_BREAK
 case 16:
-#line 338 "fscanner.l"
+#line 309 "fscanner.l"
 case 17:
 YY_RULE_SETUP
-#line 338 "fscanner.l"
+#line 309 "fscanner.l"
 { /* #include file */
 			char	*s;
 			char remember = yytext[yyleng-1];
@@ -30309,7 +30283,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 359 "fscanner.l"
+#line 330 "fscanner.l"
 {
 			/* could be the last enum member initializer */
 			if (braces == initializerbraces) {
@@ -30341,7 +30315,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 388 "fscanner.l"
+#line 359 "fscanner.l"
 {	/* count unmatched left parentheses for function templates */
 			++parens;
 			goto more;
@@ -30350,7 +30324,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 393 "fscanner.l"
+#line 364 "fscanner.l"
 {
 			if (--parens <= 0) {
 				parens = 0;
@@ -30366,7 +30340,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 405 "fscanner.l"
+#line 376 "fscanner.l"
 {	/* if a global definition initializer */
 			if (!my_yytext)
 				return(LEXERR);
@@ -30380,7 +30354,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 415 "fscanner.l"
+#line 386 "fscanner.l"
 {	/* a if global structure field */
 			if (!my_yytext)
 				return(LEXERR);
@@ -30393,7 +30367,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 424 "fscanner.l"
+#line 395 "fscanner.l"
 {
 			if (braces == initializerbraces) {
 				initializerbraces = -1;
@@ -30406,7 +30380,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 433 "fscanner.l"
+#line 404 "fscanner.l"
 {	/* if the enum/struct/union was not a definition */
 			if (braces == 0) {
 				esudef = NO;
@@ -30428,7 +30402,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 451 "fscanner.l"
+#line 422 "fscanner.l"
 {
 				
 			/* preprocessor macro or constant definition */
@@ -30456,7 +30430,7 @@ YY_RULE_SETUP
 case 26:
 /* rule 26 can match eol */
 YY_RULE_SETUP
-#line 474 "fscanner.l"
+#line 445 "fscanner.l"
 {   /* unknown preprocessor line */
 			BEGIN(INITIAL);
                         ++myylineno;
@@ -30465,10 +30439,10 @@ YY_RULE_SETUP
 		}
 	YY_BREAK
 case 27:
-#line 481 "fscanner.l"
+#line 452 "fscanner.l"
 case 28:
 YY_RULE_SETUP
-#line 481 "fscanner.l"
+#line 452 "fscanner.l"
 {   /* unknown preprocessor line */
 			BEGIN(INITIAL);
 			goto more;
@@ -30478,7 +30452,7 @@ YY_RULE_SETUP
 case 29:
 /* rule 29 can match eol */
 YY_RULE_SETUP
-#line 487 "fscanner.l"
+#line 458 "fscanner.l"
 {	/* class definition */
 			classdef = YES;
 			tagdef =  'c';
@@ -30490,7 +30464,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 496 "fscanner.l"
+#line 467 "fscanner.l"
 {
 			ident_start = first;
 			BEGIN(WAS_ESU);
@@ -30501,7 +30475,7 @@ YY_RULE_SETUP
 case 31:
 /* rule 31 can match eol */
 YY_RULE_SETUP
-#line 502 "fscanner.l"
+#line 473 "fscanner.l"
 { /* e/s/u definition */
 			tagdef = my_yytext[ident_start];
 			BEGIN(WAS_IDENTIFIER);
@@ -30511,7 +30485,7 @@ YY_RULE_SETUP
 case 32:
 /* rule 32 can match eol */
 YY_RULE_SETUP
-#line 507 "fscanner.l"
+#line 478 "fscanner.l"
 { /* e/s/u definition without a tag */
 			tagdef = my_yytext[ident_start];
 			BEGIN(INITIAL);
@@ -30526,11 +30500,11 @@ YY_RULE_SETUP
 	YY_BREAK
 case 33:
 /* rule 33 can match eol */
-#line 519 "fscanner.l"
+#line 490 "fscanner.l"
 case 34:
 /* rule 34 can match eol */
 YY_RULE_SETUP
-#line 519 "fscanner.l"
+#line 490 "fscanner.l"
 {   /* e/s/u usage */
 			BEGIN(WAS_IDENTIFIER);
 			goto ident;
@@ -30540,7 +30514,7 @@ YY_RULE_SETUP
 case 35:
 /* rule 35 can match eol */
 YY_RULE_SETUP
-#line 525 "fscanner.l"
+#line 496 "fscanner.l"
 { 	/* ignore 'if' */
 			yyless(2);
 			yy_set_bol(0);
@@ -30549,7 +30523,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 531 "fscanner.l"
+#line 502 "fscanner.l"
 {	/* identifier found: do nothing, yet. (!) */
 			BEGIN(WAS_IDENTIFIER);
 			ident_start = first;
@@ -30561,7 +30535,7 @@ YY_RULE_SETUP
 case 37:
 /* rule 37 can match eol */
 YY_RULE_SETUP
-#line 539 "fscanner.l"
+#line 510 "fscanner.l"
 {
 			/* a function definition */
 			/* note: "#define a (b) {" and "#if defined(a)\n#" 
@@ -30588,7 +30562,7 @@ YY_RULE_SETUP
 case 38:
 /* rule 38 can match eol */
 YY_RULE_SETUP
-#line 561 "fscanner.l"
+#line 532 "fscanner.l"
 { 	/* function call */
 		fcncal:	if (fcndef == YES || ppdefine == YES || rules == YES) {
 				token = FCNCALL;
@@ -30606,7 +30580,7 @@ YY_RULE_SETUP
 case 39:
 /* rule 39 can match eol */
 YY_RULE_SETUP
-#line 574 "fscanner.l"
+#line 545 "fscanner.l"
 {	/* typedef name or modifier use */
 			goto ident;
 			/* NOTREACHED */
@@ -30615,7 +30589,7 @@ YY_RULE_SETUP
 case 40:
 /* rule 40 can match eol */
 YY_RULE_SETUP
-#line 578 "fscanner.l"
+#line 549 "fscanner.l"
 {		/* general identifer usage */
 			char	*s;
 
@@ -30658,7 +30632,7 @@ YY_RULE_SETUP
 				
 				/* skip to the end of the line */
 				warning("line too long");
-				while ((c = skipcomment_input()) > LEXEOF) { 
+				while ((c = input()) > LEXEOF) { 
 					if (c == '\n') {
 						unput(c);
 						break;
@@ -30728,7 +30702,7 @@ YY_RULE_SETUP
 
 case 41:
 YY_RULE_SETUP
-#line 688 "fscanner.l"
+#line 659 "fscanner.l"
 {	/* array dimension (don't worry or about subscripts) */
 			arraydimension = YES;
 			goto more;
@@ -30737,7 +30711,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 693 "fscanner.l"
+#line 664 "fscanner.l"
 {
 			arraydimension = NO;
 			goto more;
@@ -30747,7 +30721,7 @@ YY_RULE_SETUP
 case 43:
 /* rule 43 can match eol */
 YY_RULE_SETUP
-#line 698 "fscanner.l"
+#line 669 "fscanner.l"
 {	/* preprocessor statement is continued on next line */
 			/* save the '\\' to the output file, but not the '\n': */
 			yyleng = 1;
@@ -30759,7 +30733,7 @@ YY_RULE_SETUP
 case 44:
 /* rule 44 can match eol */
 YY_RULE_SETUP
-#line 705 "fscanner.l"
+#line 676 "fscanner.l"
 {	/* end of the line */
 			if (ppdefine == YES) {	/* end of a #define */
 				ppdefine = NO;
@@ -30774,16 +30748,16 @@ YY_RULE_SETUP
 				int	c, i;
 
 				/* FIXME HBB 20001007: should call input() instead */
-				switch (skipcomment_input()) {	/* tab and EOF just fall through */
+				switch (input()) {	/* tab and EOF just fall through */
 				case ' ':	/* breakpoint number line */
 				case '[':
-					for (i = 1; i < 8 && skipcomment_input() > LEXEOF; ++i)
+					for (i = 1; i < 8 && input() > LEXEOF; ++i)
 						;
 					break;
 				case '.':	/* header line */
 				case '/':
 					/* skip to the end of the line */
-					while ((c = skipcomment_input()) > LEXEOF) {
+					while ((c = input()) > LEXEOF) {
 						if (c == '\n') {
 							unput(c);
 							break;
@@ -30812,7 +30786,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 755 "fscanner.l"
+#line 726 "fscanner.l"
 {	/* character constant */
 			if (sdl == NO) 
 				BEGIN(IN_SQUOTE);
@@ -30822,7 +30796,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 761 "fscanner.l"
+#line 732 "fscanner.l"
 {	
 			BEGIN(INITIAL);
 			goto more;
@@ -30831,7 +30805,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 766 "fscanner.l"
+#line 737 "fscanner.l"
 {	/* string constant */
 			BEGIN(IN_DQUOTE);
 			goto more;
@@ -30840,7 +30814,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 771 "fscanner.l"
+#line 742 "fscanner.l"
 {	
 			BEGIN(INITIAL);
 			goto more;
@@ -30851,7 +30825,7 @@ YY_RULE_SETUP
 case 49:
 /* rule 49 can match eol */
 YY_RULE_SETUP
-#line 777 "fscanner.l"
+#line 748 "fscanner.l"
 {	/* syntax error: unexpected EOL */
 			BEGIN(INITIAL);
 			goto eol;
@@ -30859,10 +30833,10 @@ YY_RULE_SETUP
 		}
 	YY_BREAK
 case 50:
-#line 783 "fscanner.l"
+#line 754 "fscanner.l"
 case 51:
 YY_RULE_SETUP
-#line 783 "fscanner.l"
+#line 754 "fscanner.l"
 {
 			goto more;
 			/* NOTREACHED */
@@ -30871,7 +30845,7 @@ YY_RULE_SETUP
 case 52:
 /* rule 52 can match eol */
 YY_RULE_SETUP
-#line 787 "fscanner.l"
+#line 758 "fscanner.l"
 {		/* line continuation inside a string! */
 			myylineno++;
 			goto more;
@@ -30881,21 +30855,21 @@ YY_RULE_SETUP
 
 case 53:
 YY_RULE_SETUP
-#line 794 "fscanner.l"
+#line 765 "fscanner.l"
 {		/* don't save leading white space */
 		}
 	YY_BREAK
 case 54:
 /* rule 54 can match eol */
 YY_RULE_SETUP
-#line 797 "fscanner.l"
+#line 768 "fscanner.l"
 {		/* eat whitespace at end of line */
 			unput('\n');
 		}
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 801 "fscanner.l"
+#line 772 "fscanner.l"
 {	/* eat non-blank whitespace sequences, replace
 			 * by single blank */
 			unput(' ');
@@ -30903,31 +30877,31 @@ YY_RULE_SETUP
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 806 "fscanner.l"
+#line 777 "fscanner.l"
 {   /* compress sequential whitespace here, not in putcrossref() */
 			unput(' ');
  		}
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 810 "fscanner.l"
+#line 781 "fscanner.l"
 yy_push_state(COMMENT);
 	YY_BREAK
 
 case 58:
-#line 813 "fscanner.l"
+#line 784 "fscanner.l"
 case 59:
 YY_RULE_SETUP
-#line 813 "fscanner.l"
+#line 784 "fscanner.l"
 ; /* do nothing */
 	YY_BREAK
 case 60:
 /* rule 60 can match eol */
-#line 815 "fscanner.l"
+#line 786 "fscanner.l"
 case 61:
 /* rule 61 can match eol */
 YY_RULE_SETUP
-#line 815 "fscanner.l"
+#line 786 "fscanner.l"
 {
 			if (ppdefine == NO) {
 				goto eol;
@@ -30939,7 +30913,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 62:
 YY_RULE_SETUP
-#line 823 "fscanner.l"
+#line 794 "fscanner.l"
 {
 			/* replace the comment by a single blank */
 			unput(' ');
@@ -30950,7 +30924,7 @@ YY_RULE_SETUP
 case 63:
 /* rule 63 can match eol */
 YY_RULE_SETUP
-#line 830 "fscanner.l"
+#line 801 "fscanner.l"
 {
 			/* C++-style one-line comment */
 			goto eol;
@@ -30958,12 +30932,12 @@ YY_RULE_SETUP
 		}
 	YY_BREAK
 case 64:
-#line 837 "fscanner.l"
+#line 808 "fscanner.l"
 case 65:
-#line 838 "fscanner.l"
+#line 809 "fscanner.l"
 case 66:
 YY_RULE_SETUP
-#line 838 "fscanner.l"
+#line 809 "fscanner.l"
 {	/* punctuation and operators */
 						more:	
 							my_yymore();
@@ -30972,10 +30946,10 @@ YY_RULE_SETUP
 	YY_BREAK
 case 67:
 YY_RULE_SETUP
-#line 844 "fscanner.l"
+#line 815 "fscanner.l"
 ECHO;
 	YY_BREAK
-#line 30979 "fscanner.c"
+#line 30953 "fscanner.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(SDL):
 case YY_STATE_EOF(IN_PREPROC):
@@ -31114,6 +31088,7 @@ case YY_STATE_EOF(COMMENT):
 			"fatal flex scanner internal error--no action found" );
 	} /* end of action switch */
 		} /* end of scanning one token */
+	} /* end of user's declarations */
 } /* end of yylex */
 
 /* yy_get_next_buffer - try to read in a new buffer
@@ -31169,21 +31144,21 @@ static int yy_get_next_buffer (void)
 
 	else
 		{
-			int num_to_read =
+			yy_size_t num_to_read =
 			YY_CURRENT_BUFFER_LVALUE->yy_buf_size - number_to_move - 1;
 
 		while ( num_to_read <= 0 )
 			{ /* Not enough room in the buffer - grow it. */
 
 			/* just a shorter name for the current buffer */
-			YY_BUFFER_STATE b = YY_CURRENT_BUFFER;
+			YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
 
 			int yy_c_buf_p_offset =
 				(int) ((yy_c_buf_p) - b->yy_ch_buf);
 
 			if ( b->yy_is_our_buffer )
 				{
-				int new_size = b->yy_buf_size * 2;
+				yy_size_t new_size = b->yy_buf_size * 2;
 
 				if ( new_size <= 0 )
 					b->yy_buf_size += b->yy_buf_size / 8;
@@ -31214,7 +31189,7 @@ static int yy_get_next_buffer (void)
 
 		/* Read in more data. */
 		YY_INPUT( (&YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[number_to_move]),
-			(yy_n_chars), (size_t) num_to_read );
+			(yy_n_chars), num_to_read );
 
 		YY_CURRENT_BUFFER_LVALUE->yy_n_chars = (yy_n_chars);
 		}
@@ -31310,7 +31285,7 @@ static int yy_get_next_buffer (void)
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
 	yy_is_jam = (yy_current_state == 5143);
 
-	return yy_is_jam ? 0 : yy_current_state;
+		return yy_is_jam ? 0 : yy_current_state;
 }
 
     static void yyunput (int c, register char * yy_bp )
@@ -31325,7 +31300,7 @@ static int yy_get_next_buffer (void)
 	if ( yy_cp < YY_CURRENT_BUFFER_LVALUE->yy_ch_buf + 2 )
 		{ /* need to shift things up to make room */
 		/* +2 for EOB chars. */
-		register int number_to_move = (yy_n_chars) + 2;
+		register yy_size_t number_to_move = (yy_n_chars) + 2;
 		register char *dest = &YY_CURRENT_BUFFER_LVALUE->yy_ch_buf[
 					YY_CURRENT_BUFFER_LVALUE->yy_buf_size + 2];
 		register char *source =
@@ -31374,7 +31349,7 @@ static int yy_get_next_buffer (void)
 
 		else
 			{ /* need more input */
-			int offset = (yy_c_buf_p) - (yytext_ptr);
+			yy_size_t offset = (yy_c_buf_p) - (yytext_ptr);
 			++(yy_c_buf_p);
 
 			switch ( yy_get_next_buffer(  ) )
@@ -31536,10 +31511,6 @@ static void yy_load_buffer_state  (void)
 	yyfree((void *) b  );
 }
 
-#ifndef __cplusplus
-extern int isatty (int );
-#endif /* __cplusplus */
-    
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
  * such as during a yyrestart() or at EOF.
@@ -31652,7 +31623,7 @@ void yypop_buffer_state (void)
  */
 static void yyensure_buffer_stack (void)
 {
-	int num_to_alloc;
+	yy_size_t num_to_alloc;
     
 	if (!(yy_buffer_stack)) {
 
@@ -31744,17 +31715,17 @@ YY_BUFFER_STATE yy_scan_string (yyconst char * yystr )
 
 /** Setup the input buffer state to scan the given bytes. The next call to yylex() will
  * scan from a @e copy of @a bytes.
- * @param bytes the byte buffer to scan
- * @param len the number of bytes in the buffer pointed to by @a bytes.
+ * @param yybytes the byte buffer to scan
+ * @param _yybytes_len the number of bytes in the buffer pointed to by @a bytes.
  * 
  * @return the newly allocated buffer state object.
  */
-YY_BUFFER_STATE yy_scan_bytes  (yyconst char * yybytes, int  _yybytes_len )
+YY_BUFFER_STATE yy_scan_bytes  (yyconst char * yybytes, yy_size_t  _yybytes_len )
 {
 	YY_BUFFER_STATE b;
 	char *buf;
 	yy_size_t n;
-	int i;
+	yy_size_t i;
     
 	/* Get memory for full buffer, including space for trailing EOB's. */
 	n = _yybytes_len + 2;
@@ -31873,7 +31844,7 @@ FILE *yyget_out  (void)
 /** Get the length of the current token.
  * 
  */
-int yyget_leng  (void)
+yy_size_t yyget_leng  (void)
 {
         return yyleng;
 }
@@ -32029,7 +32000,7 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 844 "fscanner.l"
+#line 815 "fscanner.l"
 
 
 
@@ -32039,8 +32010,8 @@ initscanner(char *srcfile)
 	char	*s;
 	
 	if (maxifbraces == NULL) {
-		maxifbraces = mymalloc(miflevel * sizeof(int));
-		preifbraces = mymalloc(miflevel * sizeof(int));
+		maxifbraces = mymalloc(miflevel * sizeof(*maxifbraces));
+		preifbraces = mymalloc(miflevel * sizeof(*preifbraces));
 	}
 	first = 0;		/* buffer index for first char of symbol */
 	last = 0;		/* buffer index for last char of symbol */
@@ -32108,136 +32079,6 @@ initscanner(char *srcfile)
 	}
 }
 
-#if !COMMENTS_BY_FLEX
-
-/* A micro-scanner that serves as the input() function of the
- * scanner. It throws away any comments in the input, correctly
- * avoiding doing this inside string/character constants, and knows
- * about backslash sequences. Now that the main scanner doesn't use
- * yymore() any longer, this could be replaced by lex rules. Left for
- * trying later. */
-
-/* Status variable: If this is non-NUL, it's the character that
-* terminates a string we're currently in. */
-static int string_terminator = '\0';
-
-/* Helper routine: treat 'c' as a character found inside a
- * string. Check if this character might be the end of that
- * string. Backslashes have to be taken care of, for the sake of
- * "quotes like \"these\" found inside a string". */
-static int
-insidestring_input(int c)
-{
-	static BOOL was_backslash = NO;
-	
-	if ((c == '\\') && (was_backslash == NO)) {
-		/* escape character found --> treat next char specially */
-		/* FIXME HBB 20001003: need treatment of backslash in the main
-		 * scanner, too. It'll get false line counts in case of "\\'",
-		 * otherwise --- they can occur as part of a lex pattern */
-		was_backslash = YES;
-		return c;
-	}
-
-	if (((c == '\t') && (lex == YES))
-	    /* Note: "\\\n" is removed even inside strings! */
-	    || ((c == '\n') && (was_backslash == NO))
-		|| (c == EOF)
-		|| ((c == string_terminator) && (was_backslash == NO))
-	   ) {
-		/* Line ended, or end-of-string was found. That is a syntax
-		 * error.  To recover, stop treatment as a string constant: */
-		string_terminator = '\0';
-	} else if (!isprint((unsigned char)c)) {
-		/* mask unprintable characters */
-		c = ' ';
-	}
-	
-	was_backslash = NO;
-	return c;
-}
-
-/* Helper function: skip over input until end of comment is found (or
- * we find that it wasn't really comment, in the first place): */
-static int
-comment(void)
-{
-	int	c, lastc;
-
-	/* Coming here, we've just read in the opening '/' of a
-	 * comment. */
-	do {
-		if ((c = getc(yyin)) == '*') {	/* C comment */
-			lastc = '\0';
-			while ((c = getc(yyin)) != EOF
-				   /* fewer '/'s --> test them first! */
-			       && (c != '/' || lastc != '*')
-			      ) { 
-				if (c == '\n') {
-					/* keep the line number count */
-					/* FIXME HBB 20001008: this is not synchronized
-					 * properly with myylineno changes by the main
-					 * scanner. A strong point in favour of moving
-					 * this to lex-code that is, IMHO */
-					++myylineno;
-				}
-				lastc = c;
-			}
-			/* return a blank for Reiser cpp token concatenation */
-			/* FIXME HBB 20001008: what on earth is 'Reiser cpp'? ANSI
-			 * C defines cpp to explicitly replace any comment by a
-			 * blank. Pre-ANSI cpp's behaved differently, but do we
-			 * really want that? If at all, it should only ever be a
-			 * non-default option (like gcc's "-traditional-cpp")
-			 * */
-			if ((c = getc(yyin)) == '_' || isalnum(c)) {
-				(void) ungetc(c, yyin);
-				c = ' ';
-				break;
-			}
-		} else if (c == '/') {		/* C++ comment */
-			while ((c = getc(yyin)) != EOF && c != '\n') {
-				; /* do nothing else */
-			}
-			break;
-		} else {					/* not a comment */
-			(void) ungetc(c, yyin);
-			c = '/';
-			break;
-			/* NOTREACHED */
-		}
-		
-	/* there may be an immediately following comment */
-	} while (c == '/');
-	return(c);
-}
-
-/* The core of the actual input() function to be used by (f)lex. The
- * calling scheme between this and the actual input() redefinition is
- * a bit different for lex and flex. See the #ifdef FLEX_SCANNER part
- * in the head section. */
-static int
-skipcomment_input(void)
-{
-	int	c;
-
-	c = getc (yyin);
-	if (string_terminator != '\0') {
-		/* don't look for comments inside strings! */
-		return insidestring_input(c);
-	} else if (c == '/') {
-		/* swallow everything until end of comment, if this is one */
-		return comment (); 
-	} else if (c == '"' || c == '\'') {
-		/* a string is beginning here, so switch input method */
-		string_terminator = c;
-	}
-	
-	return c;
-}
-
-#endif /* !COMMENTS_BY_FLEX */
-
 #define MY_YY_ALLOCSTEP 1000
 static void
 my_yymore(void)
@@ -32247,8 +32088,7 @@ my_yymore(void)
 	/* my_yytext is an ever-growing buffer. It will not ever
 	 * shrink, nor will it be freed at end of program, for now */
 	while (my_yyleng + yyleng + 1 >= yytext_size) {
-		my_yytext = myrealloc(my_yytext, 
-				      		  yytext_size += MY_YY_ALLOCSTEP);
+		my_yytext = myrealloc(my_yytext, yytext_size += MY_YY_ALLOCSTEP);
 	}
 	
 	strncpy (my_yytext + my_yyleng, yytext, yyleng+1);

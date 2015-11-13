@@ -48,7 +48,7 @@
 #endif
 #include <regex.h>
 
-static char const rcsid[] = "$Id: find.c,v 1.25 2012/06/15 11:18:11 nhorman Exp $";
+static char const rcsid[] = "$Id: find.c,v 1.27 2014/11/20 21:12:54 broeker Exp $";
 
 /* most of these functions have been optimized so their innermost loops have
  * only one test for the desired character by putting the char and 
@@ -875,7 +875,7 @@ putsource(int seemore, FILE *output)
 			retreat = YES;
 			/* read the previous block */
 			(void) dbseek((blocknumber - 1) * BUFSIZ);
-			cp = &block[BUFSIZ - 1];
+			cp = block + (BUFSIZ - 1);
 		}
 	}
 	blockp = cp;
@@ -1201,14 +1201,15 @@ getposting(void)
 static void
 putpostingref(POSTING *p, char *pat)
 {
-	static char	function[PATLEN + 1];	/* function name */
+	// initialize function to "unknown" so that the first line of temp1
+	// is properly formed if symbol matches a header file entry first time
+	static char function[PATLEN + 1] = "unknown";/* function name */
 
 	if (p->fcnoffset == 0) {
 		if (p->type == FCNDEF) { /* need to find the function name */
 			if (dbseek(p->lineoffset) != -1) {
 				scanpast(FCNDEF);
-				fetch_string_from_dbase(function,
-							sizeof(function));
+				fetch_string_from_dbase(function, sizeof(function));
 			}
 		}
 		else if (p->type != FCNCALL) {

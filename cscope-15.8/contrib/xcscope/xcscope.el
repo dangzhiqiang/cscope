@@ -2,7 +2,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;
 ; File:         xcscope.el
-; RCS:          $RCSfile: xcscope.el,v $ $Revision: 1.14 $ $Date: 2002/04/10 16:59:00 $ $Author: darrylo $
+; RCS:          $RCSfile: xcscope.el,v $ $Revision: 1.16 $ $Date: 2013/08/06 07:50:10 $ $Author: darrylo $
 ; Description:  cscope interface for (X)Emacs
 ; Author:       Darryl Okahata
 ; Created:      Wed Apr 19 17:03:38 2000
@@ -830,6 +830,12 @@ be removed by quitting the cscope buffer."
   :group 'cscope)
 
 
+(defcustom cscope-close-window-after-select nil
+  "*If non-nil close the window showing the cscope buffer after an entry has been selected."
+  :type 'boolean
+  :group 'cscope)
+
+
 (defvar cscope-minor-mode-hooks nil
   "List of hooks to call when entering cscope-minor-mode.")
 
@@ -915,6 +921,8 @@ Must end with a newline.")
       (define-key cscope-list-entry-keymap [button2] 'cscope-mouse-select-entry-other-window)
     (define-key cscope-list-entry-keymap [mouse-2] 'cscope-mouse-select-entry-other-window))
   (define-key cscope-list-entry-keymap [return] 'cscope-select-entry-other-window)
+  ;; \r is for Emacs:
+  (define-key cscope-list-entry-keymap "\r" 'cscope-select-entry-other-window)
   (define-key cscope-list-entry-keymap " " 'cscope-show-entry-other-window)
   (define-key cscope-list-entry-keymap "o" 'cscope-select-entry-one-window)
   (define-key cscope-list-entry-keymap "q" 'cscope-bury-buffer)
@@ -927,6 +935,7 @@ Must end with a newline.")
   (define-key cscope-list-entry-keymap "g" 'cscope-find-global-definition)
   (define-key cscope-list-entry-keymap "G"
     'cscope-find-global-definition-no-prompting)
+  (define-key cscope-list-entry-keymap "=" 'cscope-find-assignments-to-this-symbol)
   (define-key cscope-list-entry-keymap "c" 'cscope-find-functions-calling-this-function)
   (define-key cscope-list-entry-keymap "C" 'cscope-find-called-functions)
   (define-key cscope-list-entry-keymap "t" 'cscope-find-this-text-string)
@@ -1119,6 +1128,7 @@ directory should begin.")
   (define-key cscope:map "\C-csd" 'cscope-find-global-definition)
   (define-key cscope:map "\C-csg" 'cscope-find-global-definition)
   (define-key cscope:map "\C-csG" 'cscope-find-global-definition-no-prompting)
+  (define-key cscope:map "\C-cs=" 'cscope-find-assignments-to-this-symbol)
   (define-key cscope:map "\C-csc" 'cscope-find-functions-calling-this-function)
   (define-key cscope:map "\C-csC" 'cscope-find-called-functions)
   (define-key cscope:map "\C-cst" 'cscope-find-this-text-string)
@@ -1154,6 +1164,8 @@ directory should begin.")
 		    [ "Find global definition" cscope-find-global-definition t ]
 		    [ "Find global definition no prompting"
 		      cscope-find-global-definition-no-prompting t ]
+		    [ "Find assignments to symbol"
+                      cscope-find-assignments-to-this-symbol t ]
 		    [ "Find functions calling a function"
 		      cscope-find-functions-calling-this-function t ]
 		    [ "Find called functions" cscope-find-called-functions t ]
@@ -1383,7 +1395,9 @@ Push current point on mark ring and select the entry window."
     (setq window (cscope-show-entry-internal file line-number t))
     (if (windowp window)
 	(select-window window))
-    ))
+    )
+  (if cscope-close-window-after-select
+    (delete-windows-on cscope-output-buffer-name)))
 
 
 (defun cscope-select-entry-one-window ()
@@ -2422,6 +2436,20 @@ file."
 		 (list "-8" symbol) nil 'cscope-process-filter
 		 'cscope-process-sentinel)
     ))
+
+
+(defun cscope-find-assignments-to-this-symbol (symbol)
+  "Locate assignments to a symbol in the source code."
+  (interactive (list
+		(cscope-prompt-for-symbol "Find assignments to this symbol: " nil)
+		))
+  (let ( (cscope-adjust t) )	 ;; Use fuzzy matching.
+    (setq cscope-symbol symbol)
+    (cscope-call (format "Finding assignments to symbol: %s" symbol)
+		 (list "-9" symbol) nil 'cscope-process-filter
+		 'cscope-process-sentinel)
+    ))
+
 
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
